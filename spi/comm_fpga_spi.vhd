@@ -9,8 +9,9 @@ entity comm_fpga_spi is
 
 		-- Microcontroller SPI interface
 		-- Protocol:
-		-- A transfer starts with falling edge of cs. The FPGA samples mosi on rising edge of sck,
-		-- the microcontroller should sample miso on falling edge of sck. Data is shifted MSB first.
+		-- A transfer starts with falling edge of cs. The FPGA samples mosi on falling edge of sck,
+		-- and the microcontroller should sample miso on falling edge of sck, too
+		-- (CPOL=0, CPHA=1 mode for LPC11U24). Data is shifted MSB first.
 		--
 		-- The first byte of a transfer is the channel number. Bit 7 is cleared, when the
 		-- host sends data to the channel. Bit 7 is set, when the host receives data from
@@ -133,12 +134,17 @@ begin
 					end if;
 			end case;
 				
-			-- latch SPI data on rising edge and return data with MISO
-			if sckEdgeDetect = "01" then
+			-- output SPI data on rising edge
+			if sckEdgeDetect(0) = '0' and sckLatch = '1' then
 				miso <= data(7);
+			end if;
+
+			-- sample MOSI on falling edge
+			if sckEdgeDetect = "10" then
 				data <= data(6 downto 0) & mosiLatch;
 				dataBitCounter <= dataBitCounter + 1;
 			end if;
+
 			if dataBitCounter = 8 then
 				dataBitCounter <= 0;
 				byteReceived <= true;
